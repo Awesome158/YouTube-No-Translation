@@ -62,7 +62,7 @@ If you want to use the [DeArrow](https://github.com/ajayyy/DeArrow) extension al
 ---
 
 **Safari users (MacOS):**  
-The extension is not available on the App Store. You can [build the extension yourself](#build-it-yourself) (macOS required), or download the installable Safari build from the [latest release](https://github.com/YouG-o/YouTube_No_Translation/releases/latest).
+The extension is not available on the App Store. You can [build the extension yourself](#build-it-yourself) (macOS required), or you can simply download the installable Safari pre-build from the [latest release](https://github.com/YouG-o/YouTube_No_Translation/releases/latest).
 
 ---
 
@@ -74,8 +74,6 @@ The extension is not available on the App Store. You can [build the extension yo
   # Build it yourself
 
 </div>
-
-  While the extension is available through the official stores, you can also build it from source:
 
   ### Prerequisites
   - Node.js
