@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.24.0] - 2026-05-20
+
 ### Changed
 - Safari : All page-context script injections now support dual-mode loading (URL for Chrome/Firefox, inline execution fallback for Safari).
 - Audio track and subtitle/embed title settings now use dedicated listeners instead of a single combined listener, allowing each to trigger at the optimal moment. (as soon as possible for audio to avoid user hearing a cut when changing audio track, later for the rest to let the player load fully)
@@ -646,7 +648,8 @@ optimize waitForElement to reduce DOM queries (checking addedNodes only)
 
 *Note: This changelog was introduced in version 2.2.30. For earlier version history, please refer to the [GitHub releases](https://github.com/YouG-o/YouTube_No_Translation/releases).*
 
-[Unreleased]: https://github.com/YouG-o/YouTube_No_Translation/compare/v2.23.0...HEAD
+[Unreleased]: https://github.com/YouG-o/YouTube_No_Translation/compare/v2.24.0...HEAD
+[2.24.0]: https://github.com/YouG-o/YouTube_No_Translation/compare/v2.23.0...v2.24.0
 [2.23.0]: https://github.com/YouG-o/YouTube_No_Translation/compare/v2.22.2...v2.23.0
 [2.22.2]: https://github.com/YouG-o/YouTube_No_Translation/compare/v2.22.1...v2.22.2
 [2.22.1]: https://github.com/YouG-o/YouTube_No_Translation/compare/v2.22.0...v2.22.1
