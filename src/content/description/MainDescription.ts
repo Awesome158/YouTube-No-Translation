@@ -14,6 +14,7 @@ import { calculateSimilarity } from '../../utils/text';
 import { extractVideoIdFromUrl } from '../../utils/video';
 import { isMobileSite } from '../../utils/navigation';
 import { descriptionCache } from './index';
+import { isSafari } from "../../utils/browser";
 
 
 export async function fetchOriginalDescription(): Promise<string | null> {
@@ -22,10 +23,34 @@ export async function fetchOriginalDescription(): Promise<string | null> {
             window.removeEventListener('ynt-description-data', handleDescription as EventListener);
             resolve(event.detail?.description || null);
         };
+
         window.addEventListener('ynt-description-data', handleDescription as EventListener);
-        const script = document.createElement('script');
-        script.src = browser.runtime.getURL('dist/content/scripts/MainDescriptionScript.js');
-        document.documentElement.appendChild(script);
+
+        const url = browser.runtime.getURL('dist/content/scripts/MainDescriptionScript.js');
+
+        let script: HTMLScriptElement;
+
+        if (isSafari()) {
+            fetch(url)
+                .then(r => r.text())
+                .then(code => {
+                    script = document.createElement('script');
+                    script.type = 'text/javascript';
+                    script.textContent = code;
+
+                    document.documentElement.appendChild(script);
+                    script.remove();
+                })
+                .catch(() => {
+                    window.removeEventListener('ynt-description-data', handleDescription as EventListener);
+                    resolve(null);
+                });
+        } else {
+            script = document.createElement('script');
+            script.src = url;
+
+            document.documentElement.appendChild(script);
+        }
     });
 }
 

@@ -12,6 +12,7 @@ import { currentSettings } from '../index';
 import { isSearchResultsPage } from '../../utils/navigation';
 import { isYouTubeDataAPIEnabled } from '../../utils/utils';
 import { isMobileSite } from '../../utils/navigation';
+import { isSafari } from '../../utils/browser';
 
 import { descriptionCache } from './index';
 
@@ -93,27 +94,50 @@ async function fetchSearchDescriptionInnerTube(videoId: string): Promise<string 
         const handleDescription = (event: CustomEvent) => {
             if (event.detail?.videoId === videoId) {
                 window.removeEventListener('ynt-search-description-inner-tube-data', handleDescription as EventListener);
+
                 // Log any error from the script
                 if (event.detail?.error) {
                     descriptionErrorLog(`InnerTube script error for ${videoId}: ${event.detail.error}`);
                 }
+
                 resolve(event.detail?.description || null);
             }
         };
 
         window.addEventListener('ynt-search-description-inner-tube-data', handleDescription as EventListener);
 
-        const script = document.createElement('script');
-        script.src = browser.runtime.getURL('dist/content/scripts/searchDescriptionInnerTube.js');
-        script.setAttribute('data-video-id', videoId);
-        document.documentElement.appendChild(script);
+        const url = browser.runtime.getURL('dist/content/scripts/searchDescriptionInnerTube.js');
 
-        setTimeout(() => {
-            script.remove();
-        }, 100);
+        let script: HTMLScriptElement;
+
+        if (isSafari()) {
+            fetch(url)
+                .then(r => r.text())
+                .then(code => {
+                    script = document.createElement('script');
+                    script.type = 'text/javascript';
+                    script.textContent = code;
+                    script.setAttribute('data-video-id', videoId);
+
+                    document.documentElement.appendChild(script);
+                    script.remove();
+                })
+                .catch(() => {
+                    window.removeEventListener('ynt-search-description-inner-tube-data', handleDescription as EventListener);
+                    resolve(null);
+                });
+        } else {
+            script = document.createElement('script');
+            script.src = url;
+            script.setAttribute('data-video-id', videoId);
+
+            document.documentElement.appendChild(script);
+        }
+
         // Timeout in case of no response
         setTimeout(() => {
             window.removeEventListener('ynt-search-description-inner-tube-data', handleDescription as EventListener);
+            if (script) script.remove();
             resolve(null);
         }, 3000);
     });

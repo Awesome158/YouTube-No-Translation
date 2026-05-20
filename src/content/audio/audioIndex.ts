@@ -10,6 +10,7 @@
 import { ExtensionSettings } from "../../types/types";
 import { audioLog, audioErrorLog } from '../../utils/logger';
 import { isMobileSite } from '../../utils/navigation';
+import { isSafari } from "../../utils/browser";
 
 
 // Update: returns a boolean indicating if audio translation is enabled
@@ -34,7 +35,6 @@ async function syncAudioLanguagePreference(): Promise<boolean> {
 
 export async function handleAudioTranslation() {   
     if (isMobileSite()) {
-        //audioLog('Mobile site detected, skipping audio translation script injection.');
         return;
     }
     
@@ -43,9 +43,21 @@ export async function handleAudioTranslation() {
         return;
     }
 
-    const script = document.createElement('script');
-    script.src = browser.runtime.getURL('dist/content/scripts/audioScript.js');
-    document.documentElement.appendChild(script);
+    const url = browser.runtime.getURL('dist/content/scripts/audioScript.js');
+
+    if (isSafari()) {
+        const code = await (await fetch(url)).text();
+
+        const script = document.createElement('script');
+        script.textContent = code;
+
+        (document.head || document.documentElement).appendChild(script);
+        script.remove();
+    } else {
+        const script = document.createElement('script');
+        script.src = url;
+        (document.head || document.documentElement).appendChild(script);
+    }
 }
 
 // Function to handle audio language selection

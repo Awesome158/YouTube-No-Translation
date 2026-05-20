@@ -12,6 +12,7 @@ import { descriptionLog, descriptionErrorLog } from "../../utils/logger";
 import { getChannelHandle, getChannelIdFromDom, getChannelIdFromInnerTube, isYouTubeDataAPIEnabled } from "../../utils/utils";
 import { normalizeText } from "../../utils/text";
 import { isMobileSite } from "../../utils/navigation";
+import { isSafari } from "../../utils/browser";
 
 import { currentSettings } from "../index";
 import { setupMobilePanelObserver } from "../Mobile/mobilePanel";
@@ -33,16 +34,34 @@ export async function getOriginalChannelDescriptionInnerTube(channelId: string):
 
         window.addEventListener('ynt-get-channel-description-inner-tube', handleResult);
 
-        const script = document.createElement('script');
-        script.src = browser.runtime.getURL('dist/content/scripts/ChannelDescriptionInnerTube.js');
-        script.async = true;
-        script.setAttribute('data-channel-id', channelId);
-        document.documentElement.appendChild(script);
+        const url = browser.runtime.getURL('dist/content/scripts/ChannelDescriptionInnerTube.js');
+
+        let script: HTMLScriptElement;
+
+        if (isSafari()) {
+            fetch(url)
+                .then(r => r.text())
+                .then(code => {
+                    script = document.createElement('script');
+                    script.textContent = code;
+                    script.async = true;
+                    script.setAttribute('data-channel-id', channelId);
+
+                    document.documentElement.appendChild(script);
+                });
+        } else {
+            script = document.createElement('script');
+            script.src = url;
+            script.async = true;
+            script.setAttribute('data-channel-id', channelId);
+
+            document.documentElement.appendChild(script);
+        }
 
         // Timeout in case of no response
         setTimeout(() => {
             window.removeEventListener('ynt-get-channel-description-inner-tube', handleResult);
-            script.remove();
+            if (script) script.remove();
             resolve(null);
         }, 3000);
     });

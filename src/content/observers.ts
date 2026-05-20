@@ -16,6 +16,7 @@ import { extractVideoIdFromUrl, extractVideoIdFromWatchFlexy } from '../utils/vi
 import { applyAudioTrack, applyVideoPlayerSettings } from '../utils/videoSettings';
 import { waitForElement, waitForFilledVideoTitles } from '../utils/dom';
 import { isMobileSite, isIrrelevantIframe } from '../utils/navigation'
+import { isSafari } from '../utils/browser';
 
 import { refreshMainTitle, refreshEmbedTitle, refreshMiniplayerTitle, cleanupMainTitleContentObserver ,cleanupIsEmptyObserver, cleanupPageTitleObserver, cleanupEmbedTitleContentObserver, cleanupMiniplayerTitleContentObserver } from './titles/mainTitle';
 import { refreshBrowsingVideos, cleanupAllBrowsingTitlesElementsObservers } from './titles/browsingTitles';
@@ -267,18 +268,41 @@ function setupTimestampClickObserver(): void {
                 seconds: seconds
             };
             
+            const url = browser.runtime.getURL('dist/content/scripts/timestampScript.js');
+
+            let script: HTMLScriptElement;
+
             // Create and inject script with timestamp data
-            const script = document.createElement('script');
-            script.src = browser.runtime.getURL('dist/content/scripts/timestampScript.js');
-            script.setAttribute('ynt-timestamp-event', JSON.stringify(timestampData));
-            document.documentElement.appendChild(script);
-            
-            // Remove script after execution
-            setTimeout(() => {
-                if (script.parentNode) {
-                    script.parentNode.removeChild(script);
-                }
-            }, 100);
+            if (isSafari()) {
+                fetch(url)
+                    .then(r => r.text())
+                    .then(code => {
+                        script = document.createElement('script');
+                        script.type = 'text/javascript';
+                        script.textContent = code;
+                        script.setAttribute('ynt-timestamp-event', JSON.stringify(timestampData));
+
+                        document.documentElement.appendChild(script);
+
+                        setTimeout(() => {
+                            if (script.parentNode) {
+                                script.parentNode.removeChild(script);
+                            }
+                        }, 100);
+                    });
+            } else {
+                script = document.createElement('script');
+                script.src = url;
+                script.setAttribute('ynt-timestamp-event', JSON.stringify(timestampData));
+                document.documentElement.appendChild(script);
+
+                // Remove script after execution
+                setTimeout(() => {
+                    if (script.parentNode) {
+                        script.parentNode.removeChild(script);
+                    }
+                }, 100);
+            }
         }
     };
     

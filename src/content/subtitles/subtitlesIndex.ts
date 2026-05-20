@@ -9,6 +9,7 @@
 
 import { subtitlesLog, coreLog } from '../../utils/logger';
 import { ExtensionSettings } from '../../types/types';
+import { isSafari } from '../../utils/browser';
 
 
 async function syncSubtitlesLanguagePreference(): Promise<boolean> {
@@ -39,9 +40,23 @@ export async function handleSubtitlesTranslation() {
         return;
     }
 
-    const script = document.createElement('script');
-    script.src = browser.runtime.getURL('dist/content/scripts/subtitlesScript.js');
-    document.documentElement.appendChild(script);
+    const url = browser.runtime.getURL('dist/content/scripts/subtitlesScript.js');
+
+    if (isSafari()) {
+        const code = await fetch(url).then(r => r.text());
+
+        const script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.textContent = code;
+
+        document.documentElement.appendChild(script);
+        script.remove();
+        return;
+    } else {
+        const script = document.createElement('script');
+        script.src = url;
+        document.documentElement.appendChild(script);
+    }
 }
 
 // Function to handle subtitle language selection

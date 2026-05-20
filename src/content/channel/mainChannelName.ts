@@ -11,6 +11,7 @@ import { titlesLog, titlesErrorLog, coreLog } from "../../utils/logger";
 import { normalizeText } from "../../utils/text";
 import { getChannelHandle, getChannelIdFromInnerTube, getChannelIdFromDom, isYouTubeDataAPIEnabled } from "../../utils/utils";
 import { currentSettings } from "../index";
+import { isSafari } from "../../utils/browser";
 
 /**
  * Checks if the current channel name displayed on the page should be updated.
@@ -58,16 +59,39 @@ export async function fetchChannelNameInnerTube(handle: string, id?: string | nu
 
         window.addEventListener('ynt-get-channel-name-inner-tube', handleResult);
 
-        const script = document.createElement('script');
-        script.src = browser.runtime.getURL('dist/content/scripts/ChannelNameInnerTubeScript.js');
-        script.async = true;
-        script.setAttribute('data-channel-id', channelId);
-        document.documentElement.appendChild(script);
+        const url = browser.runtime.getURL('dist/content/scripts/ChannelNameInnerTubeScript.js');
+
+        let script: HTMLScriptElement;
+
+        if (isSafari()) {
+            fetch(url)
+                .then(r => r.text())
+                .then(code => {
+                    script = document.createElement('script');
+                    script.type = 'text/javascript';
+                    script.textContent = code;
+                    script.async = true;
+                    script.setAttribute('data-channel-id', channelId);
+
+                    document.documentElement.appendChild(script);
+                })
+                .catch(() => {
+                    window.removeEventListener('ynt-get-channel-name-inner-tube', handleResult);
+                    resolve(null);
+                });
+        } else {
+            script = document.createElement('script');
+            script.src = url;
+            script.async = true;
+            script.setAttribute('data-channel-id', channelId);
+
+            document.documentElement.appendChild(script);
+        }
 
         // Timeout in case of no response
         setTimeout(() => {
             window.removeEventListener('ynt-get-channel-name-inner-tube', handleResult);
-            script.remove();
+            if (script) script.remove();
             resolve(null);
         }, 3000);
     });

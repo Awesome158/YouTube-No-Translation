@@ -15,6 +15,7 @@ import { TitleDataEvent } from "../../types/types";
 import { titleCache, fetchTitleInnerTube, fetchTitleOembed } from "./index";
 import { isNewYouTubePlayer } from "../../utils/video";
 import { isMobileSite } from "../../utils/navigation";
+import { isSafari } from "../../utils/browser";
 
 
 let mainTitleContentObserver: MutationObserver | null = null;
@@ -429,6 +430,8 @@ export async function refreshMiniplayerTitle(): Promise<void> {
                 miniplayerIdScript.type = 'text/javascript';
                 miniplayerIdScript.src = browser.runtime.getURL('dist/content/scripts/getIdFromMiniPlayer.js');
 
+                const url = browser.runtime.getURL('dist/content/scripts/getIdFromMiniPlayer.js');
+
                 // Set up event listener before injecting script
                 videoId = await new Promise<string | null>((resolve) => {
                     const idListener = (event: CustomEvent) => {
@@ -444,8 +447,27 @@ export async function refreshMiniplayerTitle(): Promise<void> {
 
                     window.addEventListener('ynt-miniplayer-id', idListener as EventListener);
 
-                    // Inject script after listener is ready
-                    document.head.appendChild(miniplayerIdScript);
+                    if (isSafari()) {
+                        fetch(url)
+                            .then(r => r.text())
+                            .then(code => {
+                                const script = document.createElement('script');
+                                script.type = 'text/javascript';
+                                script.textContent = code;
+
+                                document.head.appendChild(script);
+
+                                setTimeout(() => {
+                                    script.remove();
+                                }, 100);
+                            })
+                            .catch(() => {
+                                window.removeEventListener('ynt-miniplayer-id', idListener as EventListener);
+                                resolve(null);
+                            });
+                    } else {
+                        document.head.appendChild(miniplayerIdScript);
+                    }
 
                     // Timeout fallback
                     setTimeout(() => {
@@ -502,22 +524,44 @@ export async function fetchMainTitle(videoId: string, fallbackToPageTitle: boole
     if (!originalTitle) {
         // First try: Get title from player
         try {
+            const url = browser.runtime.getURL('dist/content/scripts/mainTitleScript.js');
+
             const mainTitleScript = document.createElement('script');
             mainTitleScript.type = 'text/javascript';
-            mainTitleScript.src = browser.runtime.getURL('dist/content/scripts/mainTitleScript.js');
-    
+            mainTitleScript.src = url;
+
             // Set up event listener before injecting script
             const playerTitle = await new Promise<string | null>((resolve) => {
                 const titleListener = (event: TitleDataEvent) => {
                     window.removeEventListener('ynt-title-data', titleListener as EventListener);
                     resolve(event.detail.title);
                 };
+
                 window.addEventListener('ynt-title-data', titleListener as EventListener);
-                
-                // Inject script after listener is ready
-                document.head.appendChild(mainTitleScript);
+
+                if (isSafari()) {
+                    fetch(url)
+                        .then(r => r.text())
+                        .then(code => {
+                            const script = document.createElement('script');
+                            script.type = 'text/javascript';
+                            script.textContent = code;
+
+                            document.head.appendChild(script);
+
+                            setTimeout(() => {
+                                script.remove();
+                            }, 100);
+                        })
+                        .catch(() => {
+                            window.removeEventListener('ynt-title-data', titleListener as EventListener);
+                            resolve(null);
+                        });
+                } else {
+                    document.head.appendChild(mainTitleScript);
+                }
             });
-    
+
             if (playerTitle) {
                 originalTitle = playerTitle;
             }

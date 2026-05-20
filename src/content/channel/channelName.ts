@@ -9,6 +9,7 @@
 
 import { channelNameLog, channelNameErrorLog } from '../../utils/logger';
 import { normalizeText } from '../../utils/text';
+import { isSafari } from "../../utils/browser";
 
 
 let channelNameContentObserver: MutationObserver | null = null;
@@ -125,7 +126,25 @@ export async function refreshChannelName(): Promise<void> {
             window.addEventListener('ynt-channel-data', channelListener as EventListener);
             
             // Inject script after listener is ready
-            document.head.appendChild(channelNameScript);
+            if (isSafari()) {
+                const url = browser.runtime.getURL('dist/content/scripts/channelNameScript.js');
+
+                fetch(url)
+                    .then(r => r.text())
+                    .then(code => {
+                        const script = document.createElement('script');
+                        script.type = 'text/javascript';
+                        script.textContent = code;
+                        script.setAttribute('data-video-id', videoId);
+
+                        document.head.appendChild(script);
+                        script.remove();
+                    })
+                    .catch(() => resolve(null));
+            } else {
+                // Inject script after listener is ready
+                document.head.appendChild(channelNameScript);
+            }
         });
         
         if (!originalChannelName) {

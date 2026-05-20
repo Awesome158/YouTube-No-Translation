@@ -10,6 +10,7 @@
 import { titlesLog, titlesErrorLog, coreLog } from '../../utils/logger';
 import type { CacheData, CacheEntry } from '../../types/types';
 import { isIrrelevantIframe } from '../../utils/navigation';
+import { isSafari } from '../../utils/browser';
 
 /**
  * Persistent cache manager for video titles using browser.storage.local.
@@ -185,23 +186,51 @@ export async function fetchTitleInnerTube(videoId: string): Promise<string | nul
         const handleTitle = (event: CustomEvent) => {
             if (event.detail?.videoId === videoId) {
                 window.removeEventListener('ynt-browsing-title-inner-tube-data', handleTitle as EventListener);
+
                 if (event.detail?.error) {
                     titlesErrorLog(`InnerTube script error for ${videoId}: ${event.detail.error}`);
                 }
+
                 resolve(event.detail?.title || null);
             }
         };
 
         window.addEventListener('ynt-browsing-title-inner-tube-data', handleTitle as EventListener);
 
-        const script = document.createElement('script');
-        script.src = browser.runtime.getURL('dist/content/scripts/TitlesInnerTube.js');
-        script.setAttribute('data-video-id', videoId);
-        document.documentElement.appendChild(script);
+        const url = browser.runtime.getURL('dist/content/scripts/TitlesInnerTube.js');
 
-        setTimeout(() => {
-            script.remove();
-        }, 100);
+        let script: HTMLScriptElement;
+
+        if (isSafari()) {
+            fetch(url)
+                .then(r => r.text())
+                .then(code => {
+                    script = document.createElement('script');
+                    script.type = 'text/javascript';
+                    script.textContent = code;
+                    script.setAttribute('data-video-id', videoId);
+
+                    document.documentElement.appendChild(script);
+
+                    setTimeout(() => {
+                        script.remove();
+                    }, 100);
+                })
+                .catch(() => {
+                    window.removeEventListener('ynt-browsing-title-inner-tube-data', handleTitle as EventListener);
+                    resolve(null);
+                });
+        } else {
+            script = document.createElement('script');
+            script.src = url;
+            script.setAttribute('data-video-id', videoId);
+
+            document.documentElement.appendChild(script);
+
+            setTimeout(() => {
+                script.remove();
+            }, 100);
+        }
 
         setTimeout(() => {
             window.removeEventListener('ynt-browsing-title-inner-tube-data', handleTitle as EventListener);
