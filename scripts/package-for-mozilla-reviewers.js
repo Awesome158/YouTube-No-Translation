@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const archiver = require('archiver');
 
 const rootDir = path.resolve(__dirname, '..');
 const outDir = path.join(rootDir, 'mozilla-source');
@@ -22,25 +22,25 @@ if (fs.existsSync(outDir)) {
 }
 fs.mkdirSync(outDir);
 
-// 2. Copy files and folders
+// 2. Copy files and folders (pure Node, no shell cp)
 for (const item of filesToCopy) {
   const srcPath = path.join(rootDir, item);
   const destPath = path.join(outDir, item);
-  if (fs.existsSync(srcPath)) {
-    if (fs.lstatSync(srcPath).isDirectory()) {
-      execSync(`cp -r "${srcPath}" "${destPath}"`);
-    } else {
-      fs.copyFileSync(srcPath, destPath);
-    }
+  if (!fs.existsSync(srcPath)) continue;
+
+  if (fs.lstatSync(srcPath).isDirectory()) {
+    fs.cpSync(srcPath, destPath, { recursive: true });
+  } else {
+    fs.copyFileSync(srcPath, destPath);
   }
 }
 
-// copy only assets/icons
-const iconsSrc = path.join(rootDir, 'assets/icons');
-const iconsDest = path.join(outDir, 'assets/icons');
+// Copy only assets/icons
+const iconsSrc = path.join(rootDir, 'assets', 'icons');
+const iconsDest = path.join(outDir, 'assets', 'icons');
 if (fs.existsSync(iconsSrc)) {
   fs.mkdirSync(path.join(outDir, 'assets'), { recursive: true });
-  execSync(`cp -r "${iconsSrc}" "${iconsDest}"`);
+  fs.cpSync(iconsSrc, iconsDest, { recursive: true });
 }
 
 // 3. Create README.md spécial reviewers
@@ -67,7 +67,6 @@ The built extension will be in \`web-ext-artifacts/firefox/\`.
 - No generated or minified files are present.
 - All build scripts and configuration are provided.
 `;
-
 fs.writeFileSync(path.join(outDir, 'README.md'), readmeContent.trim() + '\n');
 
 // Get version from package.json
@@ -76,13 +75,23 @@ const version = pkg.version;
 
 // 4. Ensure output directory exists for the zip
 const firefoxArtifactsDir = path.join(rootDir, 'web-ext-artifacts', 'firefox');
-if (!fs.existsSync(firefoxArtifactsDir)) {
-  fs.mkdirSync(firefoxArtifactsDir, { recursive: true });
-}
+fs.mkdirSync(firefoxArtifactsDir, { recursive: true });
 
-// 5. Zip the folder with version in the name, inside web-ext-artifacts/firefox/
+// 5. Zip using archiver (cross-platform, no shell zip command needed) with version in the name, inside web-ext-artifacts/firefox/
 const zipName = `mozilla-source-ynt-v${version}.zip`;
 const zipPath = path.join(firefoxArtifactsDir, zipName);
-execSync(`cd "${rootDir}" && zip -r "${zipPath}" mozilla-source`);
-fs.rmSync(outDir, { recursive: true, force: true });
-console.log(`✅ Mozilla source package created: ${zipPath}`);
+
+const output = fs.createWriteStream(zipPath);
+const archive = archiver('zip', { zlib: { level: 9 } });
+
+archive.on('error', (err) => { throw err; });
+
+output.on('close', () => {
+  // Clean up the temp folder once zip is written
+  fs.rmSync(outDir, { recursive: true, force: true });
+  console.log(`Mozilla source package created: ${zipPath}`);
+});
+
+archive.pipe(output);
+archive.directory(outDir, 'mozilla-source');
+archive.finalize();
