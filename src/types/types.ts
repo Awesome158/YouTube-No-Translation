@@ -57,6 +57,10 @@ export interface ExtensionSettings {
         installationDate: string;
         lastPromptDate: string;
     };
+    titleLanguageFilter: {
+        enabled: boolean;
+        languages: string[];
+    };
     devLog: boolean;
 }
 

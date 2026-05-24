@@ -16,6 +16,11 @@ export function waitForElement(selector: string, timeout = 7500): Promise<Elemen
             return resolve(existingElement);
         }
 
+        const root = document.body || document.documentElement;
+        if (!(root instanceof Node)) {
+            return reject(new Error('waitForElement: no valid root node for selector: ' + selector));
+        }
+
         const observer = new MutationObserver((mutations) => {
             for (const mutation of mutations) {
                 if (mutation.type === 'childList') {
@@ -46,7 +51,7 @@ export function waitForElement(selector: string, timeout = 7500): Promise<Elemen
             reject(new Error('Timeout waiting for element: ' + selector));
         }, timeout);
 
-        observer.observe(document.body, {
+        observer.observe(root, {
             childList: true,
             subtree: true
         });

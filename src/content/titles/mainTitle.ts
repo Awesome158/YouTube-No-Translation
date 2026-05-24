@@ -16,6 +16,7 @@ import { titleCache, fetchTitleInnerTube, fetchTitleOembed } from "./index";
 import { isNewYouTubePlayer } from "../../utils/video";
 import { isMobileSite } from "../../utils/navigation";
 import { isSafari } from "../../utils/browser";
+import { isTitleInSkippedLanguage } from "../../utils/languageDetection";
 
 
 let mainTitleContentObserver: MutationObserver | null = null;
@@ -605,6 +606,17 @@ export async function fetchMainTitle(videoId: string, fallbackToPageTitle: boole
         } catch (apiError) {
             mainTitleErrorLog(`YouTube Data API v3 error for ${videoId}:`, apiError);
         }
+    }
+
+    // Language filter: if the *original* title is in a preferred language, don't replace
+    if (
+        originalTitle &&
+        currentSettings?.titleLanguageFilter?.enabled &&
+        currentSettings.titleLanguageFilter.languages.length > 0 &&
+        isTitleInSkippedLanguage(originalTitle, currentSettings.titleLanguageFilter.languages)
+    ) {
+        mainTitleLog(`Original title language is in preferred list, skipping for ${videoId}`);
+        return null;
     }
 
     // Last resort: Use page title if allowed

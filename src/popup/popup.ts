@@ -31,10 +31,140 @@ const youtubeApiKeyContainer = document.getElementById('youtubeApiKeyContainer')
 const devLogToggle = document.getElementById('devLogEnabled') as HTMLInputElement;
 const clearCacheBtn = document.getElementById('clearCacheBtn') as HTMLButtonElement;
 
+const titleLanguageFilterToggle = document.getElementById('titleLanguageFilterEnabled') as HTMLInputElement;
+const titleLanguageFilterContainer = document.getElementById('titleLanguageFilterContainer') as HTMLDivElement;
+const titleLanguageFilterChips = document.getElementById('titleLanguageFilterChips') as HTMLDivElement;
+const titleLanguageFilterInput = document.getElementById('titleLanguageFilterInput') as HTMLInputElement;
+const titleLanguageFilterSuggestions = document.getElementById('titleLanguageFilterSuggestions') as HTMLUListElement;
+
 // Extra settings collapsible section - only exists in popup
 const extraSettingsToggle = document.getElementById('extraSettingsToggle') as HTMLDivElement;
 const extraSettingsContent = document.getElementById('extraSettingsContent') as HTMLDivElement;
 const extraSettingsArrow = document.getElementById('extraSettingsArrow');
+
+// Language filter chip UI elements
+// Full language list (ISO 639-3 code → display name)
+const LANGUAGE_OPTIONS: { code: string; name: string }[] = [
+    { code: 'cmn', name: 'Mandarin Chinese' }, { code: 'spa', name: 'Spanish' },
+    { code: 'eng', name: 'English' }, { code: 'rus', name: 'Russian' },
+    { code: 'arb', name: 'Standard Arabic' }, { code: 'ben', name: 'Bengali' },
+    { code: 'hin', name: 'Hindi' }, { code: 'por', name: 'Portuguese' },
+    { code: 'ind', name: 'Indonesian' }, { code: 'jpn', name: 'Japanese' },
+    { code: 'fra', name: 'French' }, { code: 'deu', name: 'German' },
+    { code: 'jav', name: 'Javanese' }, { code: 'kor', name: 'Korean' },
+    { code: 'tel', name: 'Telugu' }, { code: 'vie', name: 'Vietnamese' },
+    { code: 'mar', name: 'Marathi' }, { code: 'ita', name: 'Italian' },
+    { code: 'tam', name: 'Tamil' }, { code: 'tur', name: 'Turkish' },
+    { code: 'urd', name: 'Urdu' }, { code: 'guj', name: 'Gujarati' },
+    { code: 'pol', name: 'Polish' }, { code: 'ukr', name: 'Ukrainian' },
+    { code: 'kan', name: 'Kannada' }, { code: 'mal', name: 'Malayalam' },
+    { code: 'pes', name: 'Iranian Persian' }, { code: 'mya', name: 'Burmese' },
+    { code: 'swh', name: 'Swahili' }, { code: 'ron', name: 'Romanian' },
+    { code: 'nld', name: 'Dutch' }, { code: 'hrv', name: 'Croatian' },
+    { code: 'tha', name: 'Thai' }, { code: 'ell', name: 'Modern Greek' },
+    { code: 'ces', name: 'Czech' }, { code: 'bel', name: 'Belarusian' },
+    { code: 'heb', name: 'Hebrew' }, { code: 'tgk', name: 'Tajik' },
+    { code: 'cat', name: 'Catalan' }, { code: 'kat', name: 'Georgian' },
+    { code: 'lao', name: 'Lao' }, { code: 'lit', name: 'Lithuanian' },
+    { code: 'fin', name: 'Finnish' }, { code: 'slk', name: 'Slovak' },
+    { code: 'dan', name: 'Danish' }, { code: 'nob', name: 'Norwegian Bokmål' },
+    { code: 'nno', name: 'Norwegian Nynorsk' }, { code: 'swe', name: 'Swedish' },
+    { code: 'bul', name: 'Bulgarian' }, { code: 'mkd', name: 'Macedonian' },
+    { code: 'slv', name: 'Slovenian' }, { code: 'lvs', name: 'Standard Latvian' },
+    { code: 'kaz', name: 'Kazakh' }, { code: 'hun', name: 'Hungarian' },
+    { code: 'afr', name: 'Afrikaans' }, { code: 'sin', name: 'Sinhala' },
+    { code: 'npi', name: 'Nepali' }, { code: 'tgl', name: 'Tagalog' },
+    { code: 'ceb', name: 'Cebuano' }, { code: 'khm', name: 'Khmer' },
+    { code: 'kin', name: 'Kinyarwanda' }, { code: 'zul', name: 'Zulu' },
+    { code: 'som', name: 'Somali' }, { code: 'hau', name: 'Hausa' },
+    { code: 'yor', name: 'Yoruba' }, { code: 'ibo', name: 'Igbo' },
+    { code: 'amh', name: 'Amharic' }, { code: 'epo', name: 'Esperanto' },
+    { code: 'glg', name: 'Galician' }, { code: 'ekk', name: 'Standard Estonian' },
+    { code: 'pan', name: 'Panjabi' }, { code: 'bod', name: 'Tibetan' },
+    { code: 'tat', name: 'Tatar' }, { code: 'xho', name: 'Xhosa' },
+    { code: 'hye', name: 'Armenian' }, { code: 'tir', name: 'Tigrinya' },
+    { code: 'wol', name: 'Wolof' }, { code: 'kir', name: 'Kirghiz' },
+    { code: 'war', name: 'Waray' }, { code: 'min', name: 'Minangkabau' },
+];
+
+let currentFilterLanguages: string[] = [];
+
+function renderFilterChips() {
+    if (!titleLanguageFilterChips) return;
+    titleLanguageFilterChips.innerHTML = '';
+    currentFilterLanguages.forEach(code => {
+        const lang = LANGUAGE_OPTIONS.find(l => l.code === code);
+        const name = lang ? lang.name : code;
+        const chip = document.createElement('span');
+        chip.className = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-700 text-white text-xs font-medium';
+        chip.textContent = name;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = '×';
+        btn.className = 'ml-1 hover:text-red-300 font-bold leading-none';
+        btn.addEventListener('click', () => {
+            currentFilterLanguages = currentFilterLanguages.filter(c => c !== code);
+            renderFilterChips();
+            saveFilterLanguages();
+        });
+        chip.appendChild(btn);
+        titleLanguageFilterChips.appendChild(chip);
+    });
+}
+
+function addFilterLanguage(code: string) {
+    if (!currentFilterLanguages.includes(code)) {
+        currentFilterLanguages.push(code);
+        renderFilterChips();
+        saveFilterLanguages();
+    }
+    if (titleLanguageFilterInput) titleLanguageFilterInput.value = '';
+    if (titleLanguageFilterSuggestions) titleLanguageFilterSuggestions.classList.add('hidden');
+}
+
+async function saveFilterLanguages() {
+    try {
+        const data = await browser.storage.local.get('settings');
+        const settings = data.settings as ExtensionSettings;
+        await browser.storage.local.set({
+            settings: {
+                ...settings,
+                titleLanguageFilter: {
+                    ...settings.titleLanguageFilter,
+                    languages: currentFilterLanguages
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Failed to save titleLanguageFilter.languages:', error);
+    }
+}
+
+function showSuggestions(query: string) {
+    if (!titleLanguageFilterSuggestions) return;
+    const q = query.toLowerCase();
+    const matches = LANGUAGE_OPTIONS.filter(l =>
+        (l.name.toLowerCase().includes(q) || l.code.toLowerCase().includes(q)) &&
+        !currentFilterLanguages.includes(l.code)
+    ).slice(0, 8);
+
+    titleLanguageFilterSuggestions.innerHTML = '';
+    if (matches.length === 0 || !q) {
+        titleLanguageFilterSuggestions.classList.add('hidden');
+        return;
+    }
+    matches.forEach(lang => {
+        const li = document.createElement('li');
+        li.className = 'px-3 py-1.5 hover:bg-gray-700 cursor-pointer';
+        li.textContent = `${lang.name} (${lang.code})`;
+        li.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            addFilterLanguage(lang.code);
+        });
+        titleLanguageFilterSuggestions.appendChild(li);
+    });
+    titleLanguageFilterSuggestions.classList.remove('hidden');
+}
 
 // Function to toggle extra settings section
 function toggleExtraSettings() {
@@ -104,6 +234,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Apply settings to UI elements
         titleToggle.checked = settings.titleTranslation;
+        titleLanguageFilterToggle.checked = settings.titleLanguageFilter.enabled;
+        // Restore selected languages as chips
+        currentFilterLanguages = [...(settings.titleLanguageFilter.languages || [])];
+        renderFilterChips();
+        titleLanguageFilterContainer.style.display = settings.titleLanguageFilter.enabled ? 'block' : 'none';
         originalThumbnailsToggle.checked = settings.originalThumbnails.enabled;
         audioToggle.checked = settings.audioTranslation.enabled;
         audioLanguageSelect.value = settings.audioTranslation.language;
@@ -242,6 +377,50 @@ titleToggle.addEventListener('change', () =>
         messageFeature: 'titles'
     })
 );
+
+titleLanguageFilterToggle.addEventListener('change', async () => {
+    const enabled = titleLanguageFilterToggle.checked;
+    titleLanguageFilterContainer.style.display = enabled ? 'block' : 'none';
+
+    try {
+        const data = await browser.storage.local.get('settings');
+        const settings = data.settings as ExtensionSettings;
+        await browser.storage.local.set({
+            settings: {
+                ...settings,
+                titleLanguageFilter: {
+                    ...settings.titleLanguageFilter,
+                    enabled
+                }
+            }
+        });
+        console.log('[YNT] Title language filter enabled:', enabled);
+    } catch (error) {
+        console.error('Failed to save titleLanguageFilter.enabled:', error);
+    }
+});
+
+if (titleLanguageFilterInput) {
+    titleLanguageFilterInput.addEventListener('input', () => {
+        showSuggestions(titleLanguageFilterInput.value);
+    });
+    titleLanguageFilterInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const q = titleLanguageFilterInput.value.toLowerCase();
+            const match = LANGUAGE_OPTIONS.find(l =>
+                (l.name.toLowerCase() === q || l.code.toLowerCase() === q) &&
+                !currentFilterLanguages.includes(l.code)
+            );
+            if (match) addFilterLanguage(match.code);
+        }
+        if (e.key === 'Escape') {
+            titleLanguageFilterSuggestions?.classList.add('hidden');
+        }
+    });
+    titleLanguageFilterInput.addEventListener('blur', () => {
+        setTimeout(() => titleLanguageFilterSuggestions?.classList.add('hidden'), 150);
+    });
+}
 
 originalThumbnailsToggle.addEventListener('change', () =>
     handleToggleChange({

@@ -352,21 +352,29 @@ async function pageVideosObserver() {
     }
     coreLog(`Setting up ${pageName} page videos observer (${isMobileSite() ? 'mobile' : 'desktop'})`);
 
+    const rootNode =
+        document.querySelector('ytd-app') ||
+        document.body ||
+        document.documentElement;
+
+    if (!(rootNode instanceof Node)) {
+        console.warn('MutationObserver skipped: no valid root node yet');
+        return;
+    }
+
     if (isMobileSite()) {
         // Mobile: wait for rich-grid-renderer-contents
         const gridContents = document.querySelector('.rich-grid-renderer-contents');
         
         if (!gridContents) {
-            // Wait for the first grid to appear
+            // Wait for the first grid to appear (10s timeout to avoid hanging)
             await new Promise<void>(resolve => {
-                const observer = new MutationObserver(() => {
+                const tid = window.setTimeout(() => { obs.disconnect(); resolve(); }, 10000);
+                const obs = new MutationObserver(() => {
                     const found = document.querySelector('.rich-grid-renderer-contents');
-                    if (found) {
-                        observer.disconnect();
-                        resolve();
-                    }
+                    if (found) { window.clearTimeout(tid); obs.disconnect(); resolve(); }
                 });
-                observer.observe(document.body, { childList: true, subtree: true });
+                obs.observe(rootNode, { childList: true, subtree: true });
             });
         }
 
@@ -385,16 +393,14 @@ async function pageVideosObserver() {
         const grids = Array.from(document.querySelectorAll('#contents.ytd-rich-grid-renderer')) as HTMLElement[];
 
         if (grids.length === 0) {
-            // Wait for the first grid to appear
+            // Wait for the first grid to appear (10s timeout to avoid hanging)
             await new Promise<void>(resolve => {
-                const observer = new MutationObserver(() => {
+                const tid = window.setTimeout(() => { obs.disconnect(); resolve(); }, 10000);
+                const obs = new MutationObserver(() => {
                     const found = document.querySelector('#contents.ytd-rich-grid-renderer');
-                    if (found) {
-                        observer.disconnect();
-                        resolve();
-                    }
+                    if (found) { window.clearTimeout(tid); obs.disconnect(); resolve(); }
                 });
-                observer.observe(document.body, { childList: true, subtree: true });
+                obs.observe(rootNode, { childList: true, subtree: true });
             });
         }
 
@@ -739,35 +745,40 @@ function setupNotificationTitlesDropdownObserver() {
 
     notificationTitlesDropdownObserver = new MutationObserver(() => {
         waitForElement('ytd-popup-container tp-yt-iron-dropdown[vertical-align="top"]').then((dropdown) => {
-            // Find the multi-page menu renderer inside the dropdown
+
             const menuRenderer = dropdown.querySelector('ytd-multi-page-menu-renderer');
             const menuStyle = menuRenderer?.getAttribute('menu-style');
             const isNotificationMenu = menuStyle === 'multi-page-menu-style-type-notifications';
 
             const computedStyle = window.getComputedStyle(dropdown);
             const isVisible = computedStyle.display !== 'none';
-            
+
             if (isVisible && isNotificationMenu && !notificationDropdownHandled) {
-                // Dropdown became visible and is the notifications menu
                 notificationDropdownHandled = true;
                 coreLog('Notification titles dropdown appeared, setting up observer');
                 setupNotificationTitlesObserver();
             } else if ((!isVisible || !isNotificationMenu) && notificationDropdownHandled) {
-                // Dropdown became hidden or is not the notifications menu
                 notificationDropdownHandled = false;
-                //coreLog('Notification titles dropdown disappeared or is not notifications, ready for next opening');
                 cleanupNotificationTitlesObserver();
             }
         }).catch(() => {
-            // Element not found within timeout, skip processing
+            // ignore timeout
         });
     });
 
-    // Observe only the popup container instead of entire body
     const popupContainer = document.querySelector('ytd-popup-container');
-    const targetElement = popupContainer || document.body;
-    
-    notificationTitlesDropdownObserver.observe(targetElement, {
+
+    const targetElement =
+        document.querySelector('ytd-app') ||
+        document.body ||
+        document.documentElement;
+
+    if (!(targetElement instanceof Node)) {
+        console.warn('MutationObserver not attached: no valid DOM node yet');
+        return;
+    }
+
+    notificationTitlesDropdownObserver!.observe(targetElement, {
         childList: true,
         subtree: true,
         attributes: true,

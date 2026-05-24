@@ -196,6 +196,32 @@
                         </div>
                     </div>
                 </div>
+                <!-- Title Language Filter Feature -->
+                <div class="p-3 rounded-lg border border-gray-600 hover:bg-gray-600 transition-colors">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <button type="button" class="text-gray-400 cursor-help hover:text-gray-300 transition-colors" title="Skip title replacement when the displayed title is already in one of your chosen languages.">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                                </svg>
+                            </button>
+                            <h2 class="text-sm font-medium text-white">Title Language Filter</h2>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" class="sr-only peer" id="titleLanguageFilterEnabled">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+                    <div class="mt-2" id="titleLanguageFilterContainer" style="display:none;">
+                        <div id="titleLanguageFilterChips" class="flex flex-wrap gap-1 mb-2"></div>
+                        <div class="relative">
+                            <input type="text" id="titleLanguageFilterInput" placeholder="Type a language..." autocomplete="off"
+                                class="w-full bg-gray-800 text-white text-xs rounded-lg px-2 py-1 border border-gray-600 focus:ring-blue-500 focus:border-blue-500">
+                            <ul id="titleLanguageFilterSuggestions"
+                                class="absolute z-30 w-full bg-gray-800 border border-gray-600 rounded-lg mt-1 text-xs text-white max-h-32 overflow-y-auto hidden"></ul>
+                        </div>
+                    </div>
+                </div>
                 <!-- Extra Settings Section -->
                 <div class="p-3 rounded-lg border border-orange-500 bg-gray-800/50">
                     <div class="flex items-center justify-between cursor-pointer" id="extraSettingsToggle">

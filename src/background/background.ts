@@ -58,6 +58,12 @@ async function migrateSettings() {
             needsUpdate = true;
         }
 
+        if (!settings.titleLanguageFilter) {
+            console.log('[YNT-Debug] Adding titleLanguageFilter setting');
+            settings.titleLanguageFilter = { enabled: false, languages: [] };
+            needsUpdate = true;
+        }
+
         // Clean up any remaining old properties that might exist
         const oldPropertiesToRemove = [
             'audioLanguage',

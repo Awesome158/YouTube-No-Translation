@@ -35,6 +35,11 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
         installationDate: new Date().toISOString(),
         lastPromptDate: ''
     },
+
+    titleLanguageFilter: {
+        enabled: false,
+        languages: [] as string[]   // ISO 639-3 codes, e.g. ['eng', 'fra']
+    },
     devLog: false
 };
 

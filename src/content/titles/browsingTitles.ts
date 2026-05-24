@@ -17,6 +17,7 @@ import { isMobileSite } from '../../utils/navigation';
 import { shouldProcessSearchDescriptionElement, batchProcessSearchDescriptions } from '../description/searchDescriptions';
 import { titleCache, fetchTitleInnerTube, fetchTitleOembed } from './index';
 import { restoreOriginalThumbnail } from '../Thumbnails/browsingThumbnails';
+import { isTitleInSkippedLanguage } from '../../utils/languageDetection';
 
 
 // --- Global variables
@@ -363,6 +364,18 @@ export async function fetchOriginalTitle(
         return { originalTitle: null, shouldSkip: true, shouldMarkAsOriginal: false, shouldMarkAsFailed: true };
     }
 
+    // Language filter: if the *original* title is in a preferred language, don't replace
+    if (
+        originalTitle &&
+        currentSettings?.titleLanguageFilter?.enabled &&
+        currentSettings.titleLanguageFilter.languages.length > 0 &&
+        isTitleInSkippedLanguage(originalTitle, currentSettings.titleLanguageFilter.languages)
+    ) {
+        titlesLog(`Original title language is in preferred list, skipping replacement for ${videoId}`);
+        titleElement.setAttribute('ynt-original', videoId);
+        return { originalTitle: null, shouldSkip: true, shouldMarkAsOriginal: true, shouldMarkAsFailed: false };
+    }
+
     // Check if title is original (not translated)
     if (normalizeText(currentTitle) === normalizeText(originalTitle)) {
         titleElement.removeAttribute('ynt');
@@ -392,11 +405,18 @@ export async function refreshBrowsingVideos(): Promise<void> {
         
         if (isMobileSite()) {
             // Mobile selectors
+            // Standard video titles: h3 has a title attribute
             const mobileTitles = Array.from(
                 document.querySelectorAll('h3[title] > a > span.yt-core-attributed-string')
             ) as HTMLElement[];
-            
-            browsingTitles = mobileTitles;
+
+            // Shorts on home/subscriptions/trending: h3 has no title attribute,
+            // span uses ytAttributedStringHost class (ytm-shorts-lockup-view-model structure)
+            const mobileShortsTitle = Array.from(
+                document.querySelectorAll('ytm-shorts-lockup-view-model h3 > a > span.ytAttributedStringHost')
+            ) as HTMLElement[];
+
+            browsingTitles = [...mobileTitles, ...mobileShortsTitle];
             //browsingTitlesLog(`Found ${browsingTitles.length} mobile browsing titles to process`);
         } else {
             // Desktop selectors
